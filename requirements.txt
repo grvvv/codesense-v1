@@ -1,0 +1,19 @@
+django>=4.2
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+pymongo
+python-dotenv
+bcrypt
+PyJWT
+
+# Scanner
+langchain
+faiss-cpu
+ollama
+pyyaml
+langchain_community
+langchain-core
+langchain-ollama
+tqdm
+psycopg-binary
