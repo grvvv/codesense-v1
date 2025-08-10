@@ -8,40 +8,31 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.views import APIView
 from rest_framework import status
-from .rag.scanner import scan_folder
+from scanner.rag.scanner import scan_folder
 import logging
 import shutil
 import threading
-from concurrent.futures import ThreadPoolExecutor
-import time
- 
-# Global tracking for concurrent scans
-active_scans = {}
-scan_counter = 0
-scan_lock = threading.Lock()
-MAX_CONCURRENT_SCANS = 10
- 
+from local.auth_app.permissions.decorators import require_permission
+
+scan_thread = None
+scan_thread_lock = threading.Lock()
+
 MEDIA_ROOT = os.path.join(settings.BASE_DIR, "media", "scans")
 os.makedirs(MEDIA_ROOT, exist_ok=True)
- 
+
 @method_decorator(csrf_exempt, name='dispatch')
 class ScanCreateView(APIView):
+    @require_permission("create_scan")
     def post(self, request):
         serializer = ScanStartSerializer(data=request.data)
+        user = request.user
+        triggered_by = user.get("id", "68863cf8ee93d4964a00d585")
+
         if serializer.is_valid():
             scan_name = serializer.validated_data['scan_name']
             project_id = serializer.validated_data['project_id']
-            triggered_by = serializer.validated_data.get('triggered_by', '')
             zip_file = serializer.validated_data['zip_file']
- 
-            # Check concurrent scan limit
-            with scan_lock:
-                current_active = len([s for s in active_scans.values() if s.is_alive()])
-                if current_active >= MAX_CONCURRENT_SCANS:
-                    return JsonResponse({
-                        "detail": f"Maximum concurrent scans ({MAX_CONCURRENT_SCANS}) reached. Please try again later."
-                    }, status=status.HTTP_429_TOO_MANY_REQUESTS)
- 
+
             # Create scan doc
             scan_data = {
                 "scan_name": scan_name,
@@ -51,54 +42,54 @@ class ScanCreateView(APIView):
             }
             scan = ScanModel.create(scan_data)
             scan_id = scan["id"]
- 
+
             # Create temporary directory for both ZIP file and extraction
             temp_dir = tempfile.mkdtemp()
             temp_zip_path = os.path.join(temp_dir, zip_file.name)
             extracted_folder_path = os.path.join(temp_dir, 'extracted')
-   
+    
             try:
                 # Save uploaded ZIP file
                 with open(temp_zip_path, 'wb+') as f:
                     for chunk in zip_file.chunks():
                         f.write(chunk)
                 logging.info(f"Uploaded zipped folder saved to {temp_zip_path}")
- 
+
                 os.makedirs(extracted_folder_path, exist_ok=True)
                 with zipfile.ZipFile(temp_zip_path, 'r') as zip_ref:
                     zip_ref.extractall(extracted_folder_path)
                 logging.info(f"ZIP file extracted to {extracted_folder_path}")
-               
+                
                 # List contents for debugging
                 extracted_contents = []
                 for root, dirs, files in os.walk(extracted_folder_path):
                     for file in files:
                         extracted_contents.append(os.path.join(root, file))
                 logging.info(f"Extracted {len(extracted_contents)} files: {extracted_contents[:10]}...")  # Show first 10 files
- 
+
             except zipfile.BadZipFile:
                 logging.error("Uploaded file is not a valid ZIP file")
                 shutil.rmtree(temp_dir)
                 return JsonResponse({"error": "Invalid zip file"}, status=status.HTTP_400_BAD_REQUEST)
- 
+
             except Exception as e:
                 logging.error(f"Failed to process uploaded file: {e}")
                 shutil.rmtree(temp_dir)
                 return JsonResponse({"detail": "Failed to process uploaded file."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-           
+            
             # Start scan in background thread
             def run_scan():
                 try:
                     # Get kb_path - assuming it's in the scanner directory
                     kb_path = os.path.join(os.getcwd(), 'scanner')
-                    logging.info(f"Starting concurrent scan with scan_name={scan_name}, kb_path={kb_path}")
-                   
+                    logging.info(f"Starting scan with scan_name={scan_name}, kb_path={kb_path}")
+                    
                     # Call scan_folder with extracted folder path
                     findings = scan_folder(folder_path=extracted_folder_path, scan_id=scan_id, triggered_by=triggered_by, kb_path=kb_path, scan_name=scan_name)
-                    logging.info(f"Concurrent scan completed successfully. Found {len(findings) if findings else 0} vulnerabilities.")
-                   
+                    logging.info(f"Scan completed successfully. Found {len(findings) if findings else 0} vulnerabilities.")
+                    
                 except Exception as e:
-                    logging.error(f"Error during concurrent scan: {e}")
+                    logging.error(f"Error during scan: {e}")
                     import traceback
                     logging.error(traceback.format_exc())
                 finally:
@@ -108,31 +99,38 @@ class ScanCreateView(APIView):
                         logging.info(f"Cleaned up temporary directory: {temp_dir}")
                     except Exception as e:
                         logging.error(f"Error cleaning up temporary files: {e}")
-                    finally:
-                        # Remove from active scans
-                        with scan_lock:
-                            active_scans.pop(scan_id, None)
- 
-            # Start the scan in a new thread
-            scan_thread = threading.Thread(target=run_scan, daemon=True)
-            with scan_lock:
-                active_scans[scan_id] = scan_thread
-            scan_thread.start()
- 
+
+            global scan_thread
+            with scan_thread_lock:
+                if scan_thread and scan_thread.is_alive():
+                    return JsonResponse({"detail": "Scan already in progress."}, status=status.HTTP_409_CONFLICT)
+                scan_thread = threading.Thread(target=run_scan, daemon=True)
+                scan_thread.start()
+
             return JsonResponse({"detail": "Scan started successfully.", "scan": scan}, status=status.HTTP_202_ACCEPTED)
         else:
             return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
    
 class ScanProgressView(APIView):
+    @require_permission("view_scans")
     def get(self, request, scan_id):
         scan = ScanModel.find_by_id(scan_id=scan_id)
         if not scan:
-            return JsonResponse({"error": "Scan not found"}, status=404)
+            return JsonResponse({"error": "Scan not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        return JsonResponse({"result": scan })
+        return JsonResponse(scan, status=status.HTTP_200_OK)
  
        
-class TestScanView(APIView):
-    def get(self, request):
-        return JsonResponse({"detail": "Hello"})
+class ScanListView(APIView):
+    @require_permission("view_scans")
+    def get(self, request, project_id):
+        page = int(request.query_params.get("page", 1))
+        limit = int(request.query_params.get("limit", 10))
+
+        scans = ScanModel.find_by_project(project_id=project_id, page=page, limit=limit)
+        if not scans:
+            return JsonResponse({"error": "Scan not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return JsonResponse(scans, status=status.HTTP_200_OK)
  

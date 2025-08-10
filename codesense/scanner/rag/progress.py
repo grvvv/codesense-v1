@@ -17,7 +17,7 @@ def update_progress(scan_id, scanned=None, total=None, status=None, end_time=Non
     if end_time is not None:
         update_fields["end_time"] = end_time
     if findings is not None:
-        update_fields["total_findings"] = findings
+        update_fields["findings"] = findings
     if error is not None:
         update_fields["error"] = error
 

@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-eab2hbcc83o#a++fva&32nwku+4_5!@e8(gp@g!gk(5v33ga(9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -53,7 +53,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'local.auth_app.middlewares.JWTAuthenticationMiddleware',  # sets request.user from token globally
 ]
 
 ROOT_URLCONF = 'codesense.urls'
@@ -86,17 +85,20 @@ MONGO_URI = "mongodb://localhost:27017/"
 MONGO_DB_NAME = "code_sense"
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://192.168.0.203:5173"
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         # Your JWT middleware sets request.user — no DRF auth class needed
         # If you want DRF-style permissions (`IsAuthenticated`), you can use a custom JWTAuthentication class later
+        # 'local.auth_app.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        # 'rest_framework.permissions.AllowAny',
+        # 'rest_framework.permissions.IsAuthenticated',
     ]
 }
 

@@ -17,19 +17,56 @@ class ProjectModel:
             "description": project.get("description", ""),
             "created_by": str(project["created_by"]),
             "created_at": project["created_at"],
-            "deleted": project.get("deleted", True)
+            "deleted": project.get("deleted", False)
         }
 
     @classmethod
     def create(cls, data):
         data["created_at"] = datetime.utcnow()
-        data["deleted"] = True
+        data["deleted"] = False
         result = cls.collection.insert_one(data)
         return cls.serialize(cls.collection.find_one({"_id": result.inserted_id}))
 
     @classmethod
-    def find_all(cls):
-        return [cls.serialize(doc) for doc in cls.collection.find({"deleted": True})]
+    def fetch_names(cls):
+        try:
+            # Only fetch _id and name
+            cursor = cls.collection.find(
+                {"deleted": False},
+                projection={ "_id": 1, "name": 1 }
+            )
+            
+            # Return only minimal project info
+            projects = [
+                { "id": str(doc["_id"]), "name": doc.get("name", "") }
+                for doc in cursor
+            ]
+            return projects
+
+        except Exception as e:
+            print(f"Error in find_all: {e}")
+            return { "error": "Internal Server Error" }
+
+
+    @classmethod
+    def find_all(cls, page=1, limit=10):
+        try:
+            skip = (page - 1) * limit
+            cursor = cls.collection.find({"deleted": False}).skip(skip).limit(limit)
+            projects =  [cls.serialize(doc) for doc in cursor]
+
+            total = cls.collection.count_documents({"deleted": False})
+            return {
+                "projects": projects,
+                "pagination": {
+                    "total": total,
+                    "page": page,
+                    "limit": limit,
+                    "pages": (total + limit - 1) // limit
+                }
+            }
+        except:
+            { "error": "Internal Server Error" }
 
     @classmethod
     def find_by_id(cls, project_id):
@@ -42,5 +79,5 @@ class ProjectModel:
 
     @classmethod
     def soft_delete(cls, project_id):
-        cls.collection.update_one({"_id": ObjectId(project_id)}, {"$set": {"deleted": False}})
+        cls.collection.update_one({"_id": ObjectId(project_id)}, {"$set": {"deleted": True}})
         return True

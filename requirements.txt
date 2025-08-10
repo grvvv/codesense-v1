@@ -6,6 +6,7 @@ pymongo
 python-dotenv
 bcrypt
 PyJWT
+openpyxl 
 
 # Scanner
 langchain

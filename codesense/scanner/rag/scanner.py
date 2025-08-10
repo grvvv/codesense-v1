@@ -48,7 +48,7 @@ def scan_folder(folder_path, kb_path, scan_id, triggered_by, scan_name):
                 logging.error(f"Error processing file {file_path}: {e}\n{traceback.format_exc()}")
             finally:
                 completed_files += 1
-                update_progress(scan_id=scan_id, scanned=completed_files)
+                update_progress(scan_id=scan_id, findings=len(all_findings), scanned=completed_files)
                 display_progress(scan_id=scan_id)
 
     finding_count = len(all_findings)

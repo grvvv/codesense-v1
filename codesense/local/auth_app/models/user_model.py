@@ -4,12 +4,8 @@ from bson import ObjectId
 from datetime import datetime
 from common.db import MongoDBClient
 
-
 class UserModel:
-    @staticmethod
-    def _get_collection():
-        db = MongoDBClient.get_database()
-        return db["users"]
+    collection = MongoDBClient.get_database()["users"]
 
     @staticmethod
     def serialize_user(user):
@@ -27,42 +23,63 @@ class UserModel:
         }
 
     @staticmethod
+    def find_all(page=1, limit=10):
+        try:
+            skip = (page - 1) * limit
+            users_cursor = UserModel.collection.find({ "deleted": False }).skip(skip).limit(limit)
+            users = [UserModel.serialize_user(u) for u in users_cursor]
+
+            total = UserModel.collection.count_documents({"deleted": False})
+            return {
+                "users": users,
+                "pagination": {
+                    "total": total,
+                    "page": page,
+                    "limit": limit,
+                    "pages": (total + limit - 1) // limit
+                }
+            }
+        except:
+            return {
+                "error": "Internal Server Error"
+            }
+    
+    @staticmethod
     def find_by_email(email: str):
-        collection = UserModel._get_collection()
-        user = collection.find_one({"email": email})
+        user = UserModel.collection.find_one({"email": email, "deleted": False })
+        if not user:
+            return None
         return user
 
     @staticmethod
     def find_by_id(user_id: str):
         try:
-            collection = UserModel._get_collection()
-            user = collection.find_one({"_id": ObjectId(user_id)})
+            user = UserModel.collection.find_one({"_id": ObjectId(user_id), "deleted": False})
             return UserModel.serialize_user(user)
         except Exception:
             return None
 
     @staticmethod
-    def create_user(email: str, hashed_password: str, name: str, company: str = None, role: str = None):
+    def create_user(email: str, hashed_password: str, name: str, company: str = None, role: str = "User", deleted: bool = False):
         now = datetime.utcnow()
-        collection = UserModel._get_collection()
         user_data = {
             "email": email,
             "password": hashed_password,
             "name": name,
             "company": company,
             "role": role,
-            "deleted": True,
+            "deleted": deleted,
             "created_at": now,
             "updated_at": now,
         }
-        result = collection.insert_one(user_data)
+        result = UserModel.collection.insert_one(user_data)
+        print(result)
         return UserModel.find_by_id(result.inserted_id)
 
     @staticmethod
     def update_user(user_id: str, update_data: dict):
         update_data["updated_at"] = datetime.utcnow()
-        collection = UserModel._get_collection()
-        collection.update_one(
+        UserModel.collection.update_one(
             {"_id": ObjectId(user_id)},
             {"$set": update_data}
         )
@@ -70,10 +87,8 @@ class UserModel:
 
     @staticmethod
     def delete_user(user_id: str):
-        collection = UserModel._get_collection()
-        return collection.delete_one({"_id": ObjectId(user_id)})
+        return UserModel.collection.delete_one({"_id": ObjectId(user_id)})
 
     @staticmethod
     def exists(email: str) -> bool:
-        collection = UserModel._get_collection()
-        return collection.count_documents({"email": email}) > 0
+        return UserModel.collection.count_documents({"email": email}) > 0

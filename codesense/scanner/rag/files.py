@@ -1,7 +1,8 @@
 import os
 import glob
 
-SUPPORTED_EXTENSIONS = ["py", "js", "java", "c", "cpp", "go", "php", "rb", "ts", "jsx", "html", "css"]
+SUPPORTED_EXTENSIONS = ["py", "js", "java", "c", "cpp", "go", "php", "rb", "ts", "jsx", "tsx", "html", "css", "cs", "kt", "kts", "scala", 
+                        "h", "cc", "cxx", "hpp", "hh", "hxx", "htm", "sql", "swift", "rs", "sh", "m", "dart", "r", "pl", "pm", "xml", "yaml", "yml" ]
 
 def get_source_files(folder_path):
     """Recursively collect source code files from the folder."""

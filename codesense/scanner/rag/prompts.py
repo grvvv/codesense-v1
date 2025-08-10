@@ -81,10 +81,10 @@ def create_enhanced_prompt(chunk, file_name, file_extension):
 
         Vulnerability: [Specific vulnerability name]
         CWE: [CWE-XXX format with description]
-        Severity: [Critical/High/Medium/Low]
+        Severity: [Critical/Medium/Low/High]
         Impact: [Detailed explanation of security impact and potential exploitation]
         Mitigation: [Specific technical steps to fix the vulnerability]
-        Affected: [Function/method name and approximate line numbers]
+        Affected: [Function/method name and exact line numbers]
         Code Snippet: [The exact vulnerable code lines]
 
         ANALYZE THIS CODE:

@@ -8,7 +8,7 @@ class PermissionModel:
 
     @staticmethod
     def get_permissions_for_role(role: str) -> dict:
-        if role == "admin":
+        if role.lower() == "admin":
             # Grant all possible permissions
             return {key: True for key in PermissionModel.get_all_permission_keys()}
 
@@ -34,16 +34,16 @@ class PermissionModel:
             "create_project",
             "delete_project",
             "update_project",
-            "view_reports",
-            "generate_report",
+            "view_projects",
+            "view_scans",
             "create_scan",
             "update_scan",
             "delete_scan",
-            "create_finding",
-            "approve_finding",
-            "reopen_finding",
-            "request_reassessment",
-            "comment_on_finding",
-            "upload_evidence",
-            "download_report"
+            "view_findings",
+            "validate_finding",
+            "delete_finding",
+            "create_report",
+            "update_report",
+            "delete_report",
+            "view_reports",
         ]

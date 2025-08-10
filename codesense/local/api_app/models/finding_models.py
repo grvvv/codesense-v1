@@ -21,7 +21,7 @@ class FindingModel:
             "title": finding.get("title", ""),
             "description": finding.get("description", ""),
             "severity": finding.get("severity", ""),
-            "filepath": finding.get("filepath", ""),
+            "file_path": finding.get("file_path", ""),
             "code_snip": finding.get("code_snip", ""),
             "security_risk": finding.get("security_risk", ""),
             "mitigation": finding.get("mitigation", ""),
@@ -63,12 +63,37 @@ class FindingModel:
         return [cls.serialize(doc) for doc in cursor]
     
     @classmethod
-    def find_by_scan(cls, scan_id: str):
+    def find_all_by_scan(cls, scan_id: str):
         cursor = cls.collection.find({
             "scan_id": ObjectId(scan_id),
             "deleted": False
         })
         return [cls.serialize(doc) for doc in cursor]
+    
+    @classmethod
+    def find_by_scan(cls, scan_id: str, page=1, limit=10):
+        try:
+            skip = (page - 1) * limit
+            cursor = cls.collection.find({
+                "scan_id": ObjectId(scan_id),
+                "deleted": False
+            }).skip(skip).limit(limit)
+            findings = [cls.serialize(doc) for doc in cursor]
+
+            total = cls.collection.count_documents({"scan_id": ObjectId(scan_id), "deleted": False})
+            return {
+                "findings": findings,
+                "pagination": {
+                    "total": total,
+                    "page": page,
+                    "limit": limit,
+                    "pages": (total + limit - 1) // limit
+                }
+            }
+        except:
+            return {
+                "error": "Internal Server Error"
+            }
 
     @classmethod
     def find_by_project(cls, project_id: str):
