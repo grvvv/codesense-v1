@@ -113,9 +113,18 @@ class FindingModel:
         return result.modified_count
 
     @classmethod
-    def mark_as_approved(cls, finding_id: str):
+    def toggle_approved(cls, finding_id: str):
+        finding = cls.collection.find_one({"_id": ObjectId(finding_id)}, {"approved": 1})
+        if not finding:
+            return None  # No finding found
+
+        new_status = not finding.get("approved", False)
         result = cls.collection.update_one(
             {"_id": ObjectId(finding_id)},
-            {"$set": {"approved": True}}
+            {"$set": {"approved": new_status}}
         )
-        return result.modified_count == 1
+        if result.modified_count != 1:
+            return None
+
+        return {"id": finding_id, "approved": new_status}
+

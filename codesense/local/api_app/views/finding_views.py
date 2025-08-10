@@ -71,6 +71,13 @@ class FindingDetailView(APIView):
         if not finding:
             return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
         return Response(finding, status=status.HTTP_200_OK)
+    
+    @require_permission("validate_finding")
+    def patch(self, request, finding_id):
+        updated_finding = FindingModel.toggle_approved(finding_id=finding_id)
+        if not updated_finding:
+            return Response({"error": "Not found or not updated"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(updated_finding, status=status.HTTP_200_OK)
 
     @require_permission("delete_finding")
     def delete(self, request, project_id):
