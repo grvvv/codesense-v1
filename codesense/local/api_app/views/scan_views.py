@@ -112,7 +112,7 @@ class ScanCreateView(APIView):
             return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
    
-class ScanProgressView(APIView):
+class ScanDetailView(APIView):
     @require_permission("view_scans")
     def get(self, request, scan_id):
         scan = ScanModel.find_by_id(scan_id=scan_id)
@@ -120,7 +120,14 @@ class ScanProgressView(APIView):
             return JsonResponse({"error": "Scan not found"}, status=status.HTTP_404_NOT_FOUND)
 
         return JsonResponse(scan, status=status.HTTP_200_OK)
- 
+    
+    @require_permission("delete_scan")
+    def delete(self, request, scan_id):
+        res = ScanModel.delete_scan(scan_id=scan_id)
+        if not res:
+            return JsonResponse({"error": "Scan not found"}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"detail": "Scan deleted permenantly"}, status=status.HTTP_204_NO_CONTENT)
+    
        
 class ScanListView(APIView):
     @require_permission("view_scans")

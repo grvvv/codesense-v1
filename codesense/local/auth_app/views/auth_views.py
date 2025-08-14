@@ -7,7 +7,7 @@ from local.auth_app.models.user_model import UserModel
 from local.auth_app.models.permission_model import PermissionModel
 from local.auth_app.utils.password import verify_password
 from local.auth_app.utils.jwt import generate_token
-from local.auth_app.permissions.decorators import require_role
+from local.auth_app.permissions.decorators import require_role, require_authentication
 
 
 class GetPermissionsView(APIView):
@@ -16,6 +16,13 @@ class GetPermissionsView(APIView):
         permissions = PermissionModel.get_permissions_for_role(role)
         return Response({"role": role, "permissions": permissions}, status=status.HTTP_200_OK)
 
+class GetMyPermissionsView(APIView):
+    @require_authentication()
+    def get(self, request):
+        user = request.user
+        role = user.get("role", "admin")
+        permissions = PermissionModel.get_permissions_for_role(role)
+        return Response({"role": role, "permissions": permissions}, status=status.HTTP_200_OK)
 
 class SetPermissionsView(APIView):
     @require_role("Admin")

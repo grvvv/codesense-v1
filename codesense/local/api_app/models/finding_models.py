@@ -105,6 +105,14 @@ class FindingModel:
         return [cls.serialize(doc) for doc in cursor]
 
     @classmethod
+    def soft_delete(cls, finding_id: str):
+        result = cls.collection.update_one(
+            {"_id": ObjectId(finding_id)},
+            {"$set": {"deleted": True}}
+        )
+        return result.modified_count
+    
+    @classmethod
     def soft_delete_by_scan(cls, scan_id: str):
         result = cls.collection.update_many(
             {"scan_id": ObjectId(scan_id)},

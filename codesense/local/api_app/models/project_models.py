@@ -44,7 +44,6 @@ class ProjectModel:
             return projects
 
         except Exception as e:
-            print(f"Error in find_all: {e}")
             return { "error": "Internal Server Error" }
 
 

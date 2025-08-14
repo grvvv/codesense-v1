@@ -73,7 +73,6 @@ class UserModel:
             "updated_at": now,
         }
         result = UserModel.collection.insert_one(user_data)
-        print(result)
         return UserModel.find_by_id(result.inserted_id)
 
     @staticmethod

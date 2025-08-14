@@ -5,7 +5,8 @@ from datetime import datetime
 from common.db import MongoDBClient
 
 class ScanModel:
-    collection = MongoDBClient.get_database()["scans"]
+    scans_collection = MongoDBClient.get_database()["scans"]
+    findings_collection = MongoDBClient.get_database()["findings"]
 
     @staticmethod
     def serialize(scan):
@@ -41,7 +42,7 @@ class ScanModel:
         data["findings"] = 0
         data["end_time"] = None
 
-        result = cls.collection.insert_one(data)
+        result = cls.scans_collection.insert_one(data)
         return cls.find_by_id(result.inserted_id)
 
     @classmethod
@@ -49,7 +50,7 @@ class ScanModel:
         """
         Update scan status to one of: queued, in_progress, completed, failed
         """
-        cls.collection.update_one(
+        cls.scans_collection.update_one(
             {"_id": ObjectId(scan_id)},
             {"$set": {"status": new_status}}
         )
@@ -67,7 +68,7 @@ class ScanModel:
                 update_fields[key] = kwargs[key]
 
         if update_fields:
-            cls.collection.update_one(
+            cls.scans_collection.update_one(
                 {"_id": ObjectId(scan_id)},
                 {"$set": update_fields}
             )
@@ -76,16 +77,16 @@ class ScanModel:
 
     @classmethod
     def find_by_id(cls, scan_id: str):
-        scan = cls.collection.find_one({"_id": ObjectId(scan_id)})
+        scan = cls.scans_collection.find_one({"_id": ObjectId(scan_id)})
         return cls.serialize(scan)
 
     @classmethod
     def find_by_project(cls, project_id: str, page=1, limit=10):
         skip = (page - 1) * limit
-        cursor = cls.collection.find({"project_id": ObjectId(project_id)}).skip(skip).limit(limit)
+        cursor = cls.scans_collection.find({"project_id": ObjectId(project_id)}).skip(skip).limit(limit)
         scans =  [cls.serialize(doc) for doc in cursor]
 
-        total = cls.collection.count_documents({"project_id": ObjectId(project_id)})
+        total = cls.scans_collection.count_documents({"project_id": ObjectId(project_id)})
         return {
             "scans": scans,
             "pagination": {
@@ -97,6 +98,12 @@ class ScanModel:
         }
 
     @classmethod
-    def delete(cls, scan_id: str):
-        result = cls.collection.delete_one({"_id": ObjectId(scan_id)})
-        return result.deleted_count == 1
+    def delete_scan(cls, scan_id: str):
+        try:
+            scan_result = cls.scans_collection.delete_one({"_id": ObjectId(scan_id)})
+            cls.findings_collection.delete_many({"scan_id": ObjectId(scan_id)})
+            return bool(scan_result.deleted_count)
+        except:
+            return False
+        
+        

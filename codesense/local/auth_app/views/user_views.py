@@ -24,6 +24,16 @@ class ProfileView(APIView):
 
         return Response(user , status=status.HTTP_200_OK)
 
+class FetchUserDetails(APIView):
+    def get(self, request, user_id):
+        if not user_id:
+            return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = UserModel.find_by_id(user_id)
+        if not user:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(user , status=status.HTTP_200_OK)
 
 class UserModuleView(APIView):
     @require_role("Admin")
@@ -54,18 +64,19 @@ class UserModuleView(APIView):
         if not UserModel.find_by_id(user_id=user_id):
             return Response({"detail": "User doesn't exists"}, status=status.HTTP_404_NOT_FOUND)
 
+        data = serializer.validated_data
         user = UserModel.update_user(
             user_id=user_id,
-            update_data={}
+            update_data=data
         )
-        return Response({ "detail": "User Deleted Successfully", "result": user }, status=status.HTTP_202_ACCEPTED)
+        return Response(user, status=status.HTTP_202_ACCEPTED)
     
     @require_role("Admin")
     def delete(self, request, user_id):
         if not UserModel.find_by_id(user_id=user_id):
             return Response({"detail": "User doesn't exists"}, status=status.HTTP_404_NOT_FOUND)
 
-        user = UserModel.update_user(
+        UserModel.update_user(
             user_id=user_id,
             update_data={"deleted": True}
         )
