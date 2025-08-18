@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 import logging
 import re
@@ -258,7 +258,7 @@ def extract_relevant_info(llm_output, file_name, scan_id, triggered_by, file_con
                     "deleted": False,
                     "approved": False,
                     "reference": reference_link,
-                    "created_at": datetime.utcnow(),
+                    "created_at": datetime.now(timezone.utc),
                     "created_by": ObjectId(triggered_by),
                     # Optional: add explicit numeric lines array for your DB if you want true "array form"
                     "lines": [start_line, end_line],

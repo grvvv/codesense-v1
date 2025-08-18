@@ -1,6 +1,6 @@
 # projects/models.py
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 from common.db import MongoDBClient
 
 class ProjectModel:
@@ -16,13 +16,13 @@ class ProjectModel:
             "preset": project.get("preset", ""),
             "description": project.get("description", ""),
             "created_by": str(project["created_by"]),
-            "created_at": project["created_at"],
+            "created_at": project["created_at"].isoformat() if project.get("created_at") else None,
             "deleted": project.get("deleted", False)
         }
 
     @classmethod
     def create(cls, data):
-        data["created_at"] = datetime.utcnow()
+        data["created_at"] = datetime.now(timezone.utc)
         data["deleted"] = False
         result = cls.collection.insert_one(data)
         return cls.serialize(cls.collection.find_one({"_id": result.inserted_id}))

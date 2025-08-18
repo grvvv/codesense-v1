@@ -18,3 +18,4 @@ langchain-core
 langchain-ollama
 tqdm
 psycopg-binary
+psutil

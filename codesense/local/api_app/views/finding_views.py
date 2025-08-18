@@ -7,7 +7,7 @@ from local.auth_app.permissions.decorators import require_permission
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
- 
+from datetime import datetime
 from ..models.finding_models import FindingModel
  
  
@@ -27,7 +27,7 @@ class FindingListCreateView(APIView):
  
  
 class ExportFindingView(APIView):
-    @require_permission("view_findings")
+    @require_permission("create_report")
     def get(self, request, scan_id):
         try:
             findings = FindingModel.find_all_by_scan(scan_id=scan_id)
@@ -67,6 +67,19 @@ class ExportFindingView(APIView):
  
             # Data rows
             for index, f in enumerate(findings, start=1):
+                created_at_raw = f.get("created_at")
+                created_at_str = ""
+
+                if isinstance(created_at_raw, datetime):
+                    created_at_str = created_at_raw.strftime("%Y-%m-%d %H:%M:%S")
+                elif isinstance(created_at_raw, str):
+                    try:
+                        # Parse ISO string back to datetime
+                        dt = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+                        created_at_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        created_at_str = created_at_raw
+
                 row_data = [
                     index,
                     f.get("title", ""),
@@ -77,7 +90,7 @@ class ExportFindingView(APIView):
                     f.get("description", ""),
                     f.get("file_path", ""),
                     f.get("reference", ""),
-                    f.get("created_at", "").strftime("%Y-%m-%d %H:%M:%S") if f.get("created_at") else ""
+                    created_at_str
                 ]
                 ws.append(row_data)
  
@@ -90,12 +103,16 @@ class ExportFindingView(APIView):
                     # Severity column coloring
                     if col_num == 4:
                         severity = str(value).lower()
-                        if severity == "high":
-                            cell.fill = PatternFill(start_color="FF4C4C", end_color="FF4C4C", fill_type="solid")
+                        if severity == "critical":
+                            cell.fill = PatternFill(start_color="800000", end_color="800000", fill_type="solid")
+                        elif severity == "high":
+                            cell.fill = PatternFill(start_color="CC0000", end_color="CC0000", fill_type="solid")
                         elif severity == "medium":
-                            cell.fill = PatternFill(start_color="FFD966", end_color="FFD966", fill_type="solid")
+                            cell.fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")
                         elif severity == "low":
-                            cell.fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")
+                            cell.fill = PatternFill(start_color="A8D08D", end_color="A8D08D", fill_type="solid")
+                        elif severity == "info":
+                            cell.fill = PatternFill(start_color="2F5496", end_color="2F5496", fill_type="solid")
  
                     # Code snippet styling
                     if col_num == 6:

@@ -1,7 +1,7 @@
 # scanner/models/scan_model.py
 
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 from common.db import MongoDBClient
 
 class ScanModel:
@@ -17,12 +17,12 @@ class ScanModel:
             "project_id": str(scan["project_id"]),
             "scan_name": scan.get("scan_name", ""),
             "status": scan.get("status", "queued"),
-            "created_at": scan.get("created_at"),
+            "created_at": scan["created_at"].isoformat() if scan.get("created_at") else None,
             "triggered_by": str(scan.get("triggered_by", "")),
             "total_files": scan.get("total_files", 0),
             "files_scanned": scan.get("files_scanned", 0),
             "findings": scan.get("findings", 0),
-            "end_time": scan.get("end_time"),
+            "end_time": scan["end_time"].isoformat() if scan.get("end_time") else None,
         }
 
     @classmethod
@@ -34,7 +34,7 @@ class ScanModel:
         data["project_id"] = ObjectId(data["project_id"]) if isinstance(data.get("project_id"), str) else data["project_id"]
         if "triggered_by" in data:
             data["triggered_by"] = ObjectId(data["triggered_by"]) if isinstance(data["triggered_by"], str) else data["triggered_by"]
-        data["created_at"] = datetime.utcnow()
+        data["created_at"] = datetime.now(timezone.utc)
         data["status"] = "queued"
         data["deleted"] = False
         data["total_files"] = 0

@@ -25,6 +25,7 @@ class ProfileView(APIView):
         return Response(user , status=status.HTTP_200_OK)
 
 class FetchUserDetails(APIView):
+    @require_role("Admin")
     def get(self, request, user_id):
         if not user_id:
             return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)

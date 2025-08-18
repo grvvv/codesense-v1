@@ -1,7 +1,7 @@
 # local/auth_app/models/user_model.py
 
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 from common.db import MongoDBClient
 
 class UserModel:
@@ -18,8 +18,8 @@ class UserModel:
             "company": user.get("company"),
             "role": user.get("role", "User"),
             "deleted": user.get("deleted", True),
-            "created_at": user.get("created_at"),
-            "updated_at": user.get("updated_at"),
+            "created_at": user["created_at"].isoformat() if user.get("created_at") else None,
+            "updated_at": user["updated_at"].isoformat() if user.get("updated_at") else None,
         }
 
     @staticmethod
@@ -61,7 +61,7 @@ class UserModel:
 
     @staticmethod
     def create_user(email: str, hashed_password: str, name: str, company: str = None, role: str = "User", deleted: bool = False):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         user_data = {
             "email": email,
             "password": hashed_password,
@@ -77,7 +77,7 @@ class UserModel:
 
     @staticmethod
     def update_user(user_id: str, update_data: dict):
-        update_data["updated_at"] = datetime.utcnow()
+        update_data["updated_at"] = datetime.now(timezone.utc)
         UserModel.collection.update_one(
             {"_id": ObjectId(user_id)},
             {"$set": update_data}

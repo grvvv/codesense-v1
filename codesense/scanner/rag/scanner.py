@@ -5,7 +5,7 @@ from .analysis import scan_single_file
 from .database import save_findings_to_db
 from .progress import update_progress, display_progress
 from .config import (set_kb_path)
-from datetime import datetime
+from datetime import datetime, timezone
 import traceback
 import logging
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ def scan_folder(folder_path, kb_path, scan_id, triggered_by, scan_name):
     total_files = len(source_files)
     if not source_files:
         logging.warning(f"No source code files found in {folder_path}")
-        update_progress(scan_id=scan_id, total=0, scanned=0, status="completed", end_time=datetime.utcnow())
+        update_progress(scan_id=scan_id, total=0, scanned=0, status="completed", end_time=datetime.now(timezone.utc))
         return []
 
     
@@ -52,7 +52,7 @@ def scan_folder(folder_path, kb_path, scan_id, triggered_by, scan_name):
                 display_progress(scan_id=scan_id)
 
     finding_count = len(all_findings)
-    update_progress(scan_id, findings=finding_count, status="completed", end_time=datetime.utcnow())
+    update_progress(scan_id, findings=finding_count, status="completed", end_time=datetime.now(timezone.utc))
     logging.info(f"Scan completed! Found {finding_count} total vulnerabilities across {total_files} files")
     if failed_files:
         logging.warning(f"{len(failed_files)} files failed during scan.")

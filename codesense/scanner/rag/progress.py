@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from common.db import MongoDBClient
 
@@ -6,7 +6,7 @@ SCAN_COLLECTION = MongoDBClient.get_database()["scans"]
 
 def update_progress(scan_id, scanned=None, total=None, status=None, end_time=None, findings=None, error=None):
     """Update scan progress in MongoDB scan document."""
-    update_fields = {"last_updated": datetime.utcnow()}
+    update_fields = {"last_updated": datetime.now(timezone.utc)}
 
     if scanned is not None:
         update_fields["files_scanned"] = scanned

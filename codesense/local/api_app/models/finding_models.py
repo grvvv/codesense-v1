@@ -1,5 +1,5 @@
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 from common.db import MongoDBClient
 
 class FindingModel:
@@ -29,7 +29,7 @@ class FindingModel:
             "deleted": finding.get("deleted", False),
             "approved": finding.get("approved", False),
             "reference": finding.get("reference", ""),
-            "created_at": finding.get("created_at")
+            "created_at": finding["created_at"].isoformat() if finding.get("created_at") else None,
         }
 
     @classmethod
@@ -40,7 +40,7 @@ class FindingModel:
         for f in findings:
             f["scan_id"] = ObjectId(f["scan_id"]) if isinstance(f.get("scan_id"), str) else f.get("scan_id")
             f["created_by"] = ObjectId(f["created_by"]) if isinstance(f.get("created_by"), str) else f.get("created_by")
-            f["created_at"] = f.get("created_at", datetime.utcnow())
+            f["created_at"] = f.get("created_at", datetime.now(timezone.utc))
             f["status"] = f.get("status", "open")
             f["deleted"] = f.get("deleted", False)
             f["approved"] = f.get("approved", False)

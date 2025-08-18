@@ -1,6 +1,6 @@
 # local/auth_app/models/permission_model.py
 
-from datetime import datetime
+from datetime import datetime, timezone
 from common.db import MongoDBClient
 
 class PermissionModel:
@@ -17,7 +17,7 @@ class PermissionModel:
 
     @staticmethod
     def set_permissions_for_role(role: str, permissions: dict):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         PermissionModel.collection.update_one(
             {"role": role},
             {"$set": {
